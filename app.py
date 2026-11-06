@@ -46,17 +46,14 @@ if not st.session_state['authenticated']:
         st.markdown("### Restricted Staff Portal")
         st.info("Please enter the official school access password to proceed.")
         
-        with st.form("login_form"):
-            entered_password = st.text_input("Password", type="password")
-            submit_login = st.form_submit_button("🔒 Login to Portal", use_container_width=True)
-            
-            if submit_login:
-                if entered_password == SCHOOL_PASSWORD:
-                    st.session_state['authenticated'] = True
-                    st.success("Login successful!")
-                    st.rerun()
-                else:
-                    st.error("❌ Incorrect password. Access denied.")
+        entered_password = st.text_input("Password", type="password")
+        if st.button("🔒 Login to Portal", use_container_width=True, type="primary"):
+            if entered_password == SCHOOL_PASSWORD:
+                st.session_state['authenticated'] = True
+                st.success("Login successful!")
+                st.rerun()
+            else:
+                st.error("❌ Incorrect password. Access denied.")
     st.stop()
 
 # --- SQLITE DATABASE SETUP ---
@@ -111,44 +108,41 @@ if st.sidebar.button("🚪 Logout", use_container_width=True):
 if menu == "Log New Incident":
     st.subheader("📝 Register New Discipline Incident")
     
-    with st.form("incident_form", clear_on_submit=True):
-        col1, col2 = st.columns(2)
-        with col1:
-            record_date = st.date_input("Incident Date", datetime.date.today())
-            adm_no = st.text_input("Admission No")
-        with col2:
-            student_name = st.text_input("Student Name")
-            reason_option = st.selectbox("Discipline Issue", ["Uniform Issue", "Shoes Issue", "ID Card Missing", "Other"])
-        
-        other_reason = ""
-        if reason_option == "Other":
-            other_reason = st.text_input("Please specify the 'Other' reason")
-        
-        submitted = st.form_submit_button("💾 Save Discipline Record", use_container_width=True)
-        
-        if submitted:
-            if not adm_no or not student_name:
-                st.warning("Please fill in both Admission No and Student Name.")
+    col1, col2 = st.columns(2)
+    with col1:
+        record_date = st.date_input("Incident Date", datetime.date.today())
+        adm_no = st.text_input("Admission No")
+    with col2:
+        student_name = st.text_input("Student Name")
+        reason_option = st.selectbox("Discipline Issue", ["Uniform Issue", "Shoes Issue", "ID Card Missing", "Other"])
+    
+    other_reason = ""
+    if reason_option == "Other":
+        other_reason = st.text_input("Please specify the 'Other' reason")
+    
+    if st.button("💾 Save Discipline Record", use_container_width=True, type="primary"):
+        if not adm_no or not student_name:
+            st.warning("Please fill in both Admission No and Student Name.")
+        else:
+            final_reason = other_reason if reason_option == "Other" else reason_option
+            if reason_option == "Other" and not other_reason:
+                st.warning("Please specify the 'Other' reason.")
             else:
-                final_reason = other_reason if reason_option == "Other" else reason_option
-                if reason_option == "Other" and not other_reason:
-                    st.warning("Please specify the 'Other' reason.")
-                else:
-                    day_str = record_date.strftime("%A")
-                    date_str = record_date.strftime("%Y-%m-%d")
-                    
-                    try:
-                        conn = sqlite3.connect(DB_NAME)
-                        cursor = conn.cursor()
-                        cursor.execute(
-                            "INSERT INTO discipline_records (adm_no, student_name, reason, record_date, record_day) VALUES (?, ?, ?, ?, ?)",
-                            (adm_no, student_name, final_reason, date_str, day_str)
-                        )
-                        conn.commit()
-                        conn.close()
-                        st.success(f"✅ Record successfully saved for {student_name} ({day_str}, {date_str})!")
-                    except Exception as e:
-                        st.error(f"Database error: {e}")
+                day_str = record_date.strftime("%A")
+                date_str = record_date.strftime("%Y-%m-%d")
+                
+                try:
+                    conn = sqlite3.connect(DB_NAME)
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        "INSERT INTO discipline_records (adm_no, student_name, reason, record_date, record_day) VALUES (?, ?, ?, ?, ?)",
+                        (adm_no, student_name, final_reason, date_str, day_str)
+                    )
+                    conn.commit()
+                    conn.close()
+                    st.success(f"✅ Record successfully saved for {student_name} ({day_str}, {date_str})!")
+                except Exception as e:
+                    st.error(f"Database error: {e}")
 
 # --- TAB 2: VIEW & SEARCH RECORDS ---
 elif menu == "View & Search Records":
@@ -224,46 +218,45 @@ elif menu == "Edit & Delete Records":
                 
                 with col_edit:
                     st.markdown("### Update Record")
-                    with st.form("edit_form"):
-                        new_date = st.date_input("Incident Date", datetime.datetime.strptime(str(current_date), "%Y-%m-%d").date())
-                        new_adm = st.text_input("Admission No", value=current_adm)
-                        new_name = st.text_input("Student Name", value=current_name)
+                    new_date = st.date_input("Incident Date", datetime.datetime.strptime(str(current_date), "%Y-%m-%d").date())
+                    new_adm = st.text_input("Admission No", value=current_adm)
+                    new_name = st.text_input("Student Name", value=current_name)
+                    
+                    default_reasons = ["Uniform Issue", "Shoes Issue", "ID Card Missing"]
+                    if current_reason in default_reasons:
+                        default_idx = default_reasons.index(current_reason)
+                        reason_choice = st.selectbox("Discipline Issue", default_reasons + ["Other"], index=default_idx)
+                        other_val = ""
+                    else:
+                        reason_choice = st.selectbox("Discipline Issue", default_reasons + ["Other"], index=3)
+                        other_val = current_reason.replace("Other: ", "") if current_reason.startswith("Other: ") else current_reason
                         
-                        default_reasons = ["Uniform Issue", "Shoes Issue", "ID Card Missing"]
-                        if current_reason in default_reasons:
-                            default_idx = default_reasons.index(current_reason)
-                            reason_choice = st.selectbox("Discipline Issue", default_reasons + ["Other"], index=default_idx)
-                            other_val = ""
+                    new_other = ""
+                    if reason_choice == "Other":
+                        new_other = st.text_input("Specify Other Reason", value=other_val)
+                    
+                    if st.button("🔄 Update Record", use_container_width=True):
+                        final_reason = new_other if reason_choice == "Other" else reason_choice
+                        if reason_choice == "Other" and not new_other:
+                            st.warning("Please specify the 'Other' reason.")
                         else:
-                            reason_choice = st.selectbox("Discipline Issue", default_reasons + ["Other"], index=3)
-                            other_val = current_reason.replace("Other: ", "") if current_reason.startswith("Other: ") else current_reason
+                            day_str = new_date.strftime("%A")
+                            date_str = new_date.strftime("%Y-%m-%d")
                             
-                        new_other = st.text_input("Specify Other Reason", value=other_val if reason_choice == "Other" else "")
-                        
-                        update_submitted = st.form_submit_button("🔄 Update Record", use_container_width=True)
-                        
-                        if update_submitted:
-                            final_reason = new_other if reason_choice == "Other" else reason_choice
-                            if reason_choice == "Other" and not new_other:
-                                st.warning("Please specify the 'Other' reason.")
-                            else:
-                                day_str = new_date.strftime("%A")
-                                date_str = new_date.strftime("%Y-%m-%d")
-                                
-                                try:
-                                    conn = sqlite3.connect(DB_NAME)
-                                    cursor = conn.cursor()
-                                    cursor.execute(
-                                        "UPDATE discipline_records SET adm_no = ?, student_name = ?, reason = ?, record_date = ?, record_day = ? WHERE id = ?",
-                                        (new_adm, new_name, final_reason, date_str, day_str, selected_id)
-                                    )
-                                    conn.commit()
-                                    cursor.close()
-                                    conn.close()
-                                    st.success("✅ Record successfully updated!")
-                                    st.rerun()
-                                except Exception as e:
-                                    st.error(f"Error updating record: {e}")
+                            try:
+                                conn = sqlite3.connect(DB_NAME)
+                                cursor = conn.cursor()
+                                cursor.execute(
+                                    "UPDATE discipline_records SET adm_no = ?, student_name = ?, reason = ?, record_date = ?, record_day = ? WHERE id = ?",
+                                    (new_adm, new_name, final_reason, date_str, day_str, selected_id)
+                                )
+                                conn.commit()
+                                cursor.close()
+                                conn.close()
+                                st.success("✅ Record successfully updated!")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Error updating record: {e}")
                                     
                 with col_del:
                     st.markdown("### Delete Record")
