@@ -11,7 +11,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- ULTRA-AESTHETIC CSS & ANIMATIONS ---
+# --- ULTRA-AESTHETIC CSS & ANIMATED SIDEBAR ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
@@ -23,12 +23,12 @@ st.markdown("""
 
     /* Smooth Page Entrance Animation */
     @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(15px); }
+        from { opacity: 0; transform: translateY(12px); }
         to { opacity: 1; transform: translateY(0); }
     }
 
     .main > div {
-        animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
 
     /* Gorgeous Gradient Header */
@@ -39,7 +39,41 @@ st.markdown("""
         color: white;
         margin-bottom: 30px;
         box-shadow: 0 15px 30px -10px rgba(30, 60, 114, 0.4);
-        animation: fadeIn 0.6s ease-out forwards;
+    }
+
+    /* Sleek Animated Sidebar Styling */
+    section[data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%) !important;
+        border-right: 1px solid rgba(255, 255, 255, 0.08);
+        animation: slideInLeft 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes slideInLeft {
+        from { transform: translateX(-30px); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+
+    /* Force Sidebar Text and Labels to be Crisp White */
+    section[data-testid="stSidebar"] h1, 
+    section[data-testid="stSidebar"] h2, 
+    section[data-testid="stSidebar"] h3, 
+    section[data-testid="stSidebar"] label, 
+    section[data-testid="stSidebar"] span, 
+    section[data-testid="stSidebar"] p {
+        color: #f8fafc !important;
+    }
+
+    /* Interactive Sidebar Radio Hover Effect */
+    section[data-testid="stSidebar"] .stRadio div label {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 8px;
+        padding: 8px 12px;
+        margin-bottom: 4px;
+    }
+    section[data-testid="stSidebar"] .stRadio div label:hover {
+        background: rgba(255, 255, 255, 0.08);
+        transform: translateX(6px);
+        cursor: pointer;
     }
 
     /* Sleek Form Containers with Hover Glow */
@@ -82,12 +116,6 @@ st.markdown("""
     .stButton>button:hover {
         transform: translateY(-2px);
         box-shadow: 0 8px 20px rgba(42, 82, 152, 0.25);
-    }
-
-    /* Custom Sidebar Styling Polish */
-    section[data-testid="stSidebar"] {
-        background-color: #f8fafc;
-        border-right: 1px solid #e2e8f0;
     }
     </style>
 """, unsafe_allow_html=True)
