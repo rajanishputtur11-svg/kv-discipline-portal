@@ -11,7 +11,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- ULTRA-AESTHETIC CSS & ANIMATED SIDEBAR ---
+# --- ULTRA-AESTHETIC CSS & DARK THEME POLISH ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
@@ -76,32 +76,37 @@ st.markdown("""
         cursor: pointer;
     }
 
-    /* Sleek Form Containers with Hover Glow */
+    /* Seamless Dark Form Containers */
     div.stForm {
-        background: #ffffff;
+        background: #1e293b !important;
         padding: 35px;
         border-radius: 16px;
-        border: 1px solid rgba(226, 232, 240, 0.8);
-        box-shadow: 0 10px 30px -10px rgba(0,0,0,0.05);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 10px 30px -10px rgba(0,0,0,0.3);
         transition: all 0.3s ease;
     }
     div.stForm:hover {
-        box-shadow: 0 20px 40px -15px rgba(42, 82, 152, 0.1);
-        border-color: #cbd5e1;
+        border-color: #3b82f6;
+        box-shadow: 0 20px 40px -15px rgba(59, 130, 246, 0.2);
+    }
+
+    /* Make Form Labels and Text White for Dark Theme */
+    div.stForm label, div.stForm p {
+        color: #f8fafc !important;
     }
 
     /* Animated Metric Cards */
     div[data-testid="metric-container"] {
-        background: white;
+        background: #1e293b;
         padding: 22px;
         border-radius: 14px;
-        border: 1px solid #e2e8f0;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
     div[data-testid="metric-container"]:hover {
         transform: translateY(-5px);
-        box-shadow: 0 15px 30px -5px rgba(42, 82, 152, 0.15);
+        box-shadow: 0 15px 30px -5px rgba(42, 82, 152, 0.3);
         border-color: #2a5298;
     }
 
@@ -111,11 +116,11 @@ st.markdown("""
         font-weight: 500;
         letter-spacing: 0.3px;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
     .stButton>button:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(42, 82, 152, 0.25);
+        box-shadow: 0 8px 20px rgba(42, 82, 152, 0.3);
     }
     </style>
 """, unsafe_allow_html=True)
