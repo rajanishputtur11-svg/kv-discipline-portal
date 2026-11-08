@@ -11,40 +11,83 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- MODERN UI STYLING (CSS) ---
+# --- ULTRA-AESTHETIC CSS & ANIMATIONS ---
 st.markdown("""
     <style>
-    /* Main Header Styling */
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+    /* Global Font Override */
+    html, body, [class*="css"] {
+        font-family: 'Poppins', sans-serif;
+    }
+
+    /* Smooth Page Entrance Animation */
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(15px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .main > div {
+        animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    /* Gorgeous Gradient Header */
     .main-header {
         background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-        padding: 20px 25px;
-        border-radius: 12px;
+        padding: 30px;
+        border-radius: 16px;
         color: white;
-        margin-bottom: 25px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-bottom: 30px;
+        box-shadow: 0 15px 30px -10px rgba(30, 60, 114, 0.4);
+        animation: fadeIn 0.6s ease-out forwards;
     }
-    
-    /* Card Container Styling */
-    .css-1r6slb0, .stApp {
-        background-color: #f8fafc;
+
+    /* Sleek Form Containers with Hover Glow */
+    div.stForm {
+        background: #ffffff;
+        padding: 35px;
+        border-radius: 16px;
+        border: 1px solid rgba(226, 232, 240, 0.8);
+        box-shadow: 0 10px 30px -10px rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
     }
-    
-    .card {
+    div.stForm:hover {
+        box-shadow: 0 20px 40px -15px rgba(42, 82, 152, 0.1);
+        border-color: #cbd5e1;
+    }
+
+    /* Animated Metric Cards */
+    div[data-testid="metric-container"] {
         background: white;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        padding: 22px;
+        border-radius: 14px;
         border: 1px solid #e2e8f0;
-        margin-bottom: 20px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    
-    /* Custom Metric Cards */
-    .metric-container {
-        background: white;
-        padding: 15px;
-        border-radius: 8px;
-        border-left: 4px solid #2a5298;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    div[data-testid="metric-container"]:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 30px -5px rgba(42, 82, 152, 0.15);
+        border-color: #2a5298;
+    }
+
+    /* Modern Buttons with Smooth Transition */
+    .stButton>button {
+        border-radius: 10px;
+        font-weight: 500;
+        letter-spacing: 0.3px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    .stButton>button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(42, 82, 152, 0.25);
+    }
+
+    /* Custom Sidebar Styling Polish */
+    section[data-testid="stSidebar"] {
+        background-color: #f8fafc;
+        border-right: 1px solid #e2e8f0;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -63,7 +106,7 @@ if not st.session_state['authenticated']:
         with st.container():
             try:
                 logo = Image.open("kv_logo.jpg")
-                st.image(logo, width=100)
+                st.image(logo, width=110)
             except FileNotFoundError:
                 pass
                 
@@ -96,15 +139,15 @@ col_logo, col_title = st.columns([0.8, 5])
 with col_logo:
     try:
         logo = Image.open("kv_logo.jpg")
-        st.image(logo, width=90)
+        st.image(logo, width=95)
     except FileNotFoundError:
         st.warning("⚠️ Logo missing.")
 
 with col_title:
     st.markdown("""
         <div class="main-header">
-            <h1 style="margin:0; font-size: 22px; color: white;">Kendriya Vidyalaya No. 2, Mangaluru</h1>
-            <h3 style="margin:5px 0 0 0; font-size: 14px; color: #cbd5e1; font-weight: normal;">Student Discipline & Incident Management Portal</h3>
+            <h1 style="margin:0; font-size: 24px; color: white; font-weight: 600;">Kendriya Vidyalaya No. 2, Mangaluru</h1>
+            <h3 style="margin:6px 0 0 0; font-size: 14px; color: #cbd5e1; font-weight: normal;">Student Discipline & Incident Management Portal</h3>
         </div>
     """, unsafe_allow_html=True)
 
@@ -281,7 +324,7 @@ elif menu == "📊 Student Report":
     
     if search_student:
         try:
-            response = supabase.table("discipline_records").select("*").or_(f"adm_no.ilike.%{search_student}%,student_name.ilike.%{search_query}%" if 'search_query' in locals() else f"adm_no.ilike.%{search_student}%,student_name.ilike.%{search_student}%").order("record_date", desc=True).execute()
+            response = supabase.table("discipline_records").select("*").or_(f"adm_no.ilike.%{search_student}%,student_name.ilike.%{search_student}%").order("record_date", desc=True).execute()
             records = response.data
             
             if records:
