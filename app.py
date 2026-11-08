@@ -1,5 +1,5 @@
 import streamlit as st
-import sqlite3
+import psycopg2
 import datetime
 import pandas as pd
 from PIL import Image
@@ -28,7 +28,6 @@ st.markdown("""
 if 'authenticated' not in st.session_state:
     st.session_state['authenticated'] = False
 
-# --- SCHOOL ACCESS PASSWORD ---
 SCHOOL_PASSWORD = "KV2Mangaluru@2026"
 
 # --- LOGIN SCREEN ---
@@ -56,28 +55,19 @@ if not st.session_state['authenticated']:
                 st.error("❌ Incorrect password. Access denied.")
     st.stop()
 
-# --- SQLITE DATABASE SETUP ---
-DB_NAME = "school_discipline.db"
+# --- SUPABASE DATABASE CONNECTION ---
+def get_db_connection():
+    db_config = st.secrets["postgres"]
+    conn = psycopg2.connect(
+        host=db_config["host"],
+        database=db_config["database"],
+        user=db_config["user"],
+        password=db_config["password"],
+        port=db_config["port"]
+    )
+    return conn
 
-def init_db():
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS discipline_records (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            adm_no TEXT NOT NULL,
-            student_name TEXT NOT NULL,
-            reason TEXT NOT NULL,
-            record_date TEXT NOT NULL,
-            record_day TEXT NOT NULL
-        )
-    ''')
-    conn.commit()
-    conn.close()
-
-init_db()
-
-# --- HEADER SECTION WITH LOGO & SCHOOL NAME ---
+# --- HEADER SECTION ---
 col_logo, col_title = st.columns([1, 5])
 
 with col_logo:
@@ -132,13 +122,14 @@ if menu == "Log New Incident":
                 date_str = record_date.strftime("%Y-%m-%d")
                 
                 try:
-                    conn = sqlite3.connect(DB_NAME)
+                    conn = get_db_connection()
                     cursor = conn.cursor()
                     cursor.execute(
-                        "INSERT INTO discipline_records (adm_no, student_name, reason, record_date, record_day) VALUES (?, ?, ?, ?, ?)",
+                        "INSERT INTO discipline_records (adm_no, student_name, reason, record_date, record_day) VALUES (%s, %s, %s, %s, %s)",
                         (adm_no, student_name, final_reason, date_str, day_str)
                     )
                     conn.commit()
+                    cursor.close()
                     conn.close()
                     st.success(f"✅ Record successfully saved for {student_name} ({day_str}, {date_str})!")
                 except Exception as e:
@@ -155,21 +146,22 @@ elif menu == "View & Search Records":
         search_query = st.text_input("Search Student (Adm No or Name)")
     
     try:
-        conn = sqlite3.connect(DB_NAME)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         if search_query:
             cursor.execute(
-                "SELECT id, adm_no, student_name, reason, record_day, record_date FROM discipline_records WHERE adm_no LIKE ? OR student_name LIKE ? ORDER BY record_date DESC",
+                "SELECT id, adm_no, student_name, reason, record_day, record_date FROM discipline_records WHERE adm_no ILIKE %s OR student_name ILIKE %s ORDER BY record_date DESC",
                 (f"%{search_query}%", f"%{search_query}%")
             )
         else:
             cursor.execute(
-                "SELECT id, adm_no, student_name, reason, record_day, record_date FROM discipline_records WHERE record_date = ?",
+                "SELECT id, adm_no, student_name, reason, record_day, record_date FROM discipline_records WHERE record_date = %s",
                 (filter_date.strftime("%Y-%m-%d"),)
             )
             
         records = cursor.fetchall()
+        cursor.close()
         conn.close()
         
         if records:
@@ -191,10 +183,11 @@ elif menu == "Edit & Delete Records":
     edit_date = st.date_input("Select Calendar Date to Manage Records", datetime.date.today())
     
     try:
-        conn = sqlite3.connect(DB_NAME)
+        conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT id, adm_no, student_name, reason, record_date FROM discipline_records WHERE record_date = ? ORDER BY id DESC", (edit_date.strftime("%Y-%m-%d"),))
+        cursor.execute("SELECT id, adm_no, student_name, reason, record_date FROM discipline_records WHERE record_date = %s ORDER BY id DESC", (edit_date.strftime("%Y-%m-%d"),))
         records = cursor.fetchall()
+        cursor.close()
         conn.close()
         
         if not records:
@@ -203,9 +196,9 @@ elif menu == "Edit & Delete Records":
             record_dict = {row[0]: f"ID: {row[0]} | Adm: {row[1]} | Name: {row[2]} | Issue: {row[3]}" for row in records}
             selected_id = st.selectbox(f"Select Record from {edit_date}", options=list(record_dict.keys()), format_func=lambda x: record_dict[x])
             
-            conn = sqlite3.connect(DB_NAME)
+            conn = get_db_connection()
             cursor = conn.cursor()
-            cursor.execute("SELECT adm_no, student_name, reason, record_date FROM discipline_records WHERE id = ?", (selected_id,))
+            cursor.execute("SELECT adm_no, student_name, reason, record_date FROM discipline_records WHERE id = %s", (selected_id,))
             selected_data = cursor.fetchone()
             cursor.close()
             conn.close()
@@ -244,10 +237,10 @@ elif menu == "Edit & Delete Records":
                             date_str = new_date.strftime("%Y-%m-%d")
                             
                             try:
-                                conn = sqlite3.connect(DB_NAME)
+                                conn = get_db_connection()
                                 cursor = conn.cursor()
                                 cursor.execute(
-                                    "UPDATE discipline_records SET adm_no = ?, student_name = ?, reason = ?, record_date = ?, record_day = ? WHERE id = ?",
+                                    "UPDATE discipline_records SET adm_no = %s, student_name = %s, reason = %s, record_date = %s, record_day = %s WHERE id = %s",
                                     (new_adm, new_name, final_reason, date_str, day_str, selected_id)
                                 )
                                 conn.commit()
@@ -263,9 +256,9 @@ elif menu == "Edit & Delete Records":
                     st.warning("Warning: Deleting a record is permanent and cannot be undone.")
                     if st.button("🗑️ Delete This Record", type="primary", use_container_width=True):
                         try:
-                            conn = sqlite3.connect(DB_NAME)
+                            conn = get_db_connection()
                             cursor = conn.cursor()
-                            cursor.execute("DELETE FROM discipline_records WHERE id = ?", (selected_id,))
+                            cursor.execute("DELETE FROM discipline_records WHERE id = %s", (selected_id,))
                             conn.commit()
                             cursor.close()
                             conn.close()
