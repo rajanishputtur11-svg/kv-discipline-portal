@@ -209,7 +209,9 @@ if menu == "📝 Log New Incident":
             adm_no = st.text_input("Admission Number", placeholder="e.g., 4589")
         with col2:
             student_name = st.text_input("Student Full Name", placeholder="e.g., Rahul Sharma")
-            reason_option = st.selectbox("Discipline Issue", ["Uniform Issue", "Shoes Issue", "ID Card Missing", "Late Arrival", "Other"])
+            student_class = st.selectbox("Class & Section", ["Class 6", "Class 7", "Class 8", "Class 9", "Class 10", "Class 11", "Class 12"])
+        
+        reason_option = st.selectbox("Discipline Issue", ["Uniform Issue", "Shoes Issue", "ID Card Missing", "Late Arrival", "Other"])
         
         other_reason = ""
         if reason_option == "Other":
@@ -232,11 +234,12 @@ if menu == "📝 Log New Incident":
                         supabase.table("discipline_records").insert({
                             "adm_no": adm_no,
                             "student_name": student_name,
+                            "student_class": student_class,
                             "reason": final_reason,
                             "record_date": date_str,
                             "record_day": day_str
                         }).execute()
-                        st.success(f"✅ Record successfully saved for {student_name} ({day_str}, {date_str})!")
+                        st.success(f"✅ Record successfully saved for {student_name} ({student_class})!")
                     except Exception as e:
                         st.error(f"Database error: {e}")
 
@@ -259,8 +262,8 @@ elif menu == "🔍 View & Search Records":
         records = response.data
         
         if records:
-            df = pd.DataFrame([[r['id'], r['adm_no'], r['student_name'], r['reason'], r['record_day'], r['record_date']] for r in records], 
-                              columns=["ID", "Admission No", "Student Name", "Reason", "Day", "Date"])
+            df = pd.DataFrame([[r['id'], r['adm_no'], r['student_name'], r.get('student_class', 'N/A'), r['reason'], r['record_day'], r['record_date']] for r in records], 
+                              columns=["ID", "Admission No", "Student Name", "Class", "Reason", "Day", "Date"])
             st.dataframe(df, use_container_width=True, hide_index=True)
             
             csv = df.to_csv(index=False).encode('utf-8')
@@ -290,7 +293,7 @@ elif menu == "✏️ Edit & Delete Records":
             single_res = supabase.table("discipline_records").select("*").eq("id", selected_id).execute()
             if single_res.data:
                 current = single_res.data[0]
-                current_adm, current_name, current_reason, current_date = current['adm_no'], current['student_name'], current['reason'], current['record_date']
+                current_adm, current_name, current_class, current_reason, current_date = current['adm_no'], current['student_name'], current.get('student_class', 'Class 12'), current['reason'], current['record_date']
                 
                 st.markdown("---")
                 col_edit, col_del = st.columns(2)
@@ -300,6 +303,10 @@ elif menu == "✏️ Edit & Delete Records":
                     new_date = st.date_input("Incident Date", datetime.datetime.strptime(str(current_date), "%Y-%m-%d").date())
                     new_adm = st.text_input("Admission No", value=current_adm)
                     new_name = st.text_input("Student Name", value=current_name)
+                    
+                    classes_list = ["Class 6", "Class 7", "Class 8", "Class 9", "Class 10", "Class 11", "Class 12"]
+                    class_idx = classes_list.index(current_class) if current_class in classes_list else 6
+                    new_class = st.selectbox("Class & Section", classes_list, index=class_idx)
                     
                     default_reasons = ["Uniform Issue", "Shoes Issue", "ID Card Missing", "Late Arrival"]
                     if current_reason in default_reasons:
@@ -326,6 +333,7 @@ elif menu == "✏️ Edit & Delete Records":
                                 supabase.table("discipline_records").update({
                                     "adm_no": new_adm,
                                     "student_name": new_name,
+                                    "student_class": new_class,
                                     "reason": final_reason,
                                     "record_date": date_str,
                                     "record_day": day_str
@@ -349,25 +357,54 @@ elif menu == "✏️ Edit & Delete Records":
     except Exception as e:
         st.error(f"Database error: {e}")
 
-# --- TAB 4: STUDENT INDIVIDUAL REPORT ---
+# --- TAB 4: STUDENT INDIVIDUAL REPORT (GOOGLE STYLE AUTOCOMPLETE) ---
 elif menu == "📊 Student Report":
     st.subheader("Individual Student Profile & Report")
+    st.info("Start typing a student's name or admission number below. Matching suggestions will appear automatically like Google search!")
     
-    search_student = st.text_input("Search Student", placeholder="Enter Admission Number or Name...")
+    # Fetch all students for autocomplete matching
+    try:
+        all_res = supabase.table("discipline_records").select("adm_no, student_name, student_class").execute()
+        all_records = all_res.data
+    except:
+        all_records = []
+        
+    # Create unique student suggestions dictionary
+    student_suggestions = {}
+    for r in all_records:
+        name = r.get('student_name', '')
+        adm = r.get('adm_no', '')
+        cls = r.get('student_class', 'N/A')
+        label = f"{name} (Adm: {adm} | {cls})"
+        student_suggestions[label] = adm
+        
+    search_input = st.text_input("Search Student", placeholder="Type name or admission number...")
     
-    if search_student:
+    selected_adm_no = None
+    if search_input:
+        # Filter suggestions matching user typing
+        filtered_labels = [label for label in student_suggestions.keys() if search_input.lower() in label.lower()]
+        
+        if filtered_labels:
+            chosen_label = st.selectbox("🔍 Matching Students (Select one)", options=filtered_labels)
+            selected_adm_no = student_suggestions[chosen_label]
+        else:
+            st.warning("No matching students found.")
+            
+    if selected_adm_no:
         try:
-            response = supabase.table("discipline_records").select("*").or_(f"adm_no.ilike.%{search_student}%,student_name.ilike.%{search_student}%").order("record_date", desc=True).execute()
+            response = supabase.table("discipline_records").select("*").eq("adm_no", selected_adm_no).order("record_date", desc=True).execute()
             records = response.data
             
             if records:
-                df = pd.DataFrame([[r['id'], r['adm_no'], r['student_name'], r['reason'], r['record_day'], r['record_date']] for r in records], 
-                                  columns=["ID", "Admission No", "Student Name", "Reason", "Day", "Date"])
+                df = pd.DataFrame([[r['id'], r['adm_no'], r['student_name'], r.get('student_class', 'N/A'), r['reason'], r['record_day'], r['record_date']] for r in records], 
+                                  columns=["ID", "Admission No", "Student Name", "Class", "Reason", "Day", "Date"])
                 
                 student_name_disp = records[0]['student_name']
                 adm_no_disp = records[0]['adm_no']
+                class_disp = records[0].get('student_class', 'N/A')
                 
-                st.markdown(f"### Student: **{student_name_disp}** (`Adm No: {adm_no_disp}`)")
+                st.markdown(f"### Student: **{student_name_disp}** (`Class: {class_disp}` | `Adm No: {adm_no_disp}`)")
                 
                 total_incidents = len(df)
                 late_count = len(df[df['Reason'].str.contains("Late", case=False, na=False)])
@@ -397,7 +434,5 @@ elif menu == "📊 Student Report":
                     mime="text/csv", 
                     use_container_width=True
                 )
-            else:
-                st.warning("No records found matching that search term.")
         except Exception as e:
             st.error(f"Error fetching report: {e}")
